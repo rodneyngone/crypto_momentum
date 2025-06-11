@@ -1,0 +1,48 @@
+# Minimal working configuration
+
+data:
+  start_date: '2022-01-01'
+  end_date: '2023-12-31'
+  universe_size: 10
+
+signals:
+  signal_strategy: momentum
+  momentum_threshold: 0.01
+  momentum_ewma_span: 20
+  adx_period: 14
+  adx_threshold: 25.0
+  ewma_fast: 10
+  ewma_slow: 30
+  volume_filter_multiple: 1.5
+  use_volume_confirmation: true
+  volume_threshold: 1.5
+
+portfolio:
+  initial_capital: 1000000.0
+  max_position_size: 0.10
+  min_position_size: 0.02
+  rebalance_frequency: weekly
+  optimization_method: risk_parity
+
+risk:
+  max_drawdown: 0.25
+  max_correlation: 0.80
+  max_exchange_exposure: 0.40
+  volatility_regime_multiplier: 1.5
+  max_drawdown_threshold: 0.25
+
+costs:
+  maker_fee: 0.001
+  taker_fee: 0.001
+  base_spread: 0.0005
+  funding_lookback_days: 30
+
+strategy:
+  universe_size: 10
+  rebalance_frequency: weekly
+  max_position_size: 0.10
+  long_short: true
+
+backtest:
+  benchmark_symbol: BTCUSDT
+  output_directory: output

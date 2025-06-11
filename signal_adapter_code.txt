@@ -1,0 +1,43 @@
+# Add this to the BacktestEngine generate_signals method as a simpler fix:
+
+def generate_signals(self, data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    """Generate trading signals for all symbols."""
+    signals = {}
+    
+    for symbol, df in data.items():
+        self.logger.info(f"Generating signals for {symbol}")
+        
+        try:
+            # Try the new interface first
+            signal_series = self.signal_generator.generate_signals(
+                df,
+                signal_type=getattr(self.config.signals, 'signal_strategy', 'momentum'),
+                symbol=symbol
+            )
+            
+            # Convert to expected format
+            signal_df = pd.DataFrame(index=df.index)
+            signal_df['position'] = signal_series
+            signal_df['long_signal'] = signal_series == 1
+            signal_df['short_signal'] = signal_series == -1
+            
+        except TypeError:
+            # Fall back to simple call
+            self.logger.warning("Using fallback signal generation")
+            
+            # Just call with the dataframe
+            result = self.signal_generator.generate_signals(df)
+            
+            if isinstance(result, pd.Series):
+                # Convert Series to DataFrame
+                signal_df = pd.DataFrame(index=df.index)
+                signal_df['position'] = result
+                signal_df['long_signal'] = result == 1
+                signal_df['short_signal'] = result == -1
+            else:
+                # Assume it's already a DataFrame
+                signal_df = result
+        
+        signals[symbol] = signal_df
+    
+    return signals

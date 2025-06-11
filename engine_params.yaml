@@ -1,0 +1,6 @@
+engine_params:
+  atr_multiplier: 2.0
+  atr_period: 14
+  max_correlation: 0.8
+  max_exchange_exposure: 0.4
+  volatility_regime_multiplier: 1.5

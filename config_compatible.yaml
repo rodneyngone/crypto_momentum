@@ -21,8 +21,9 @@ signals:
   mean_return_simple_window: 3
   adx_period: 14
   adx_threshold: 25.0
-  ewma_fast: 10
-  ewma_slow: 30
+  rsi_period: 14
+  rsi_oversold: 25.0
+  rsi_overbought: 75.0
   use_volume_confirmation: true
   volume_threshold: 1.5
   volume_lookback: 20
@@ -34,6 +35,10 @@ signals:
   volatility_adjustment: true
   correlation_filter: true
   correlation_threshold: 0.8
+  ewma_fast: 10
+  ewma_slow: 30
+  threshold: 0.01
+  lookback: 20
 portfolio:
   initial_capital: 1000000.0
   max_position_size: 0.1
@@ -54,7 +59,7 @@ risk:
   position_var_limit: 0.1
   correlation_threshold: 0.8
   volatility_lookback: 20
-  volatility_multiple: 1.5
+  volatility_multiple: 2.5
   use_stop_losses: true
   stop_loss_pct: 0.08
   use_take_profits: false
@@ -78,6 +83,7 @@ costs:
   borrow_rate: 0.0002
   fill_probability: 0.95
   partial_fill_threshold: 0.5
+  funding_lookback_days: 30
 backtest:
   execution_delay: 0
   market_hours_only: false
