@@ -509,7 +509,7 @@ class EnhancedRiskManager:
     @staticmethod
     def calculate_expected_shortfall(returns: pd.Series, confidence_level: float = 0.95) -> float:
         """Calculate Expected Shortfall (CVaR)."""
-        var = RiskManager.calculate_var(returns, confidence_level)
+        var = EnhancedRiskManager.calculate_var(returns, confidence_level)
         tail_returns = returns[returns <= var]
         return tail_returns.mean() if len(tail_returns) > 0 else var
     

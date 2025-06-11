@@ -242,7 +242,7 @@ Key parameter updates in config_enhanced.yaml:
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 '''
     
-    with open("ENHANCEMENT_SUMMARY.md", "w") as f:
+    with open("ENHANCEMENT_SUMMARY.md", "w", encoding="utf-8") as f:
         f.write(report)
     
     print("\n📄 Created ENHANCEMENT_SUMMARY.md")
@@ -357,7 +357,7 @@ if __name__ == "__main__":
     main()
 '''
     
-    with open("test_enhanced_strategy.py", "w") as f:
+    with open("test_enhanced_strategy.py", "w", encoding="utf-8") as f:
         f.write(test_script)
     
     print("📄 Created test_enhanced_strategy.py")
