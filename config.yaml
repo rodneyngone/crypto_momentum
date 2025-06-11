@@ -1,29 +1,98 @@
-costs:
-  base_spread: 0.0001
-  funding_lookback_days: 30
-  maker_fee: 0.0002
-  taker_fee: 0.0004
-risk:
-  atr_multiplier: 4.0
-  atr_period: 14
-  max_correlation: 0.8
-  max_drawdown_threshold: 0.25
-  max_exchange_exposure: 0.4
-  volatility_regime_multiplier: 1.5
+data:
+  start_date: '2022-01-01'
+  end_date: '2023-12-31'
+  universe_size: 10
+  market_cap_threshold: 100000000
+  exclude_stablecoins: true
+  survivorship_bias: true
+  data_source: binance
+  cache_directory: data
+  cache_days: 30
+  update_frequency: daily
+  min_trading_days: 100
+  max_missing_data_pct: 0.05
 signals:
+  signal_strategy: momentum
+  momentum_threshold: 0.01
+  momentum_ewma_span: 2.5
+  mean_return_ewm_threshold: 0.015
+  mean_return_ewm_span: 5.0
+  mean_return_simple_threshold: 0.015
+  mean_return_simple_window: 10
   adx_period: 14
   adx_threshold: 7.5
-  combine_signals: override
-  ewma_fast: 2.5
-  ewma_slow: 7.5
-  mean_return_ewm_span: 5.0
-  mean_return_threshold: 0
-  mean_return_type: ewm
-  mean_return_window: 7.5
-  use_mean_return_signal: 0.25
-  volume_filter_multiple: 0.5
-strategy:
-  long_short: true
+  rsi_period: 14
+  rsi_oversold: 30.0
+  rsi_overbought: 70.0
+  use_volume_confirmation: true
+  volume_threshold: 1.2
+  volume_lookback: 20
+  min_signal_gap: 1
+  max_signals_per_period: 100
+  signal_decay_periods: 5
+  use_regime_detection: false
+  volatility_adjustment: true
+  correlation_filter: false
+  correlation_threshold: 0.8
+portfolio:
+  initial_capital: 1000000.0
   max_position_size: 0.1
-  rebalance_frequency: weekly
-  universe_size: 10
+  min_position_size: 0.01
+  rebalance_frequency: monthly
+  rebalance_threshold: 0.05
+  optimization_method: risk_parity
+  target_volatility: 0.15
+  max_concentration: 0.2
+  sector_max_weight: 0.3
+  consider_transaction_costs: true
+  min_trade_size: 100.0
+  target_cash_allocation: 0.0
+  max_cash_allocation: 0.05
+risk:
+  max_drawdown: 0.2
+  daily_var_limit: 0.05
+  position_var_limit: 0.1
+  correlation_threshold: 0.8
+  volatility_lookback: 30
+  volatility_multiple: 2.0
+  use_stop_losses: true
+  stop_loss_pct: 0.05
+  use_take_profits: false
+  take_profit_pct: 0.1
+  leverage_limit: 1.0
+  sector_concentration_limit: 0.3
+  risk_monitoring_frequency: daily
+  alert_thresholds:
+    drawdown_warning: 0.1
+    volatility_warning: 0.25
+    correlation_warning: 0.7
+costs:
+  maker_fee: 0.001
+  taker_fee: 0.001
+  base_spread: 0.0005
+  impact_coefficient: 0.0001
+  use_slippage: true
+  slippage_coefficient: 0.0002
+  max_slippage: 0.005
+  funding_rate: 0.0001
+  borrow_rate: 0.0002
+  fill_probability: 0.95
+  partial_fill_threshold: 0.5
+backtest:
+  execution_delay: 0
+  market_hours_only: false
+  benchmark_symbol: BTCUSDT
+  risk_free_rate: 0.02
+  walk_forward_analysis: false
+  out_of_sample_periods: 252
+  monte_carlo_runs: 1000
+  save_trades: true
+  save_positions: true
+  save_metrics: true
+  output_directory: output
+  calculate_attribution: true
+  attribution_frequency: monthly
+random_seed: 42
+log_level: INFO
+parallel_processing: true
+max_workers: 4
