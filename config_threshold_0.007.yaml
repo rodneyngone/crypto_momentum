@@ -12,12 +12,12 @@ risk:
   volatility_regime_multiplier: 1.5
 signals:
   adx_period: 14
-  adx_threshold: 7.5
+  adx_threshold: 0.007
   combine_signals: override
   ewma_fast: 2.5
   ewma_slow: 7.5
   mean_return_ewm_span: 5.0
-  mean_return_threshold: 0
+  mean_return_threshold: 0.007
   mean_return_type: ewm
   mean_return_window: 7.5
   use_mean_return_signal: 0.25

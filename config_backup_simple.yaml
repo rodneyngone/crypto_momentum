@@ -1,0 +1,43 @@
+strategy:
+  universe_size: 10
+  rebalance_frequency: weekly
+  max_position_size: 0.1
+  long_short: true
+signals:
+  adx_period: 14
+  adx_threshold: 30
+  ewma_fast: 10
+  ewma_slow: 30
+  volume_filter_multiple: 2.0
+  use_mean_return_signal: true
+  mean_return_window: 3
+  mean_return_type: ewm
+  mean_return_threshold: 0.005
+  mean_return_ewm_span: 20
+  combine_signals: override
+  ewm_span: 10
+  threshold: 0.01
+  ewm_mean_threshold: 0.003
+  signal_type: momentum
+  use_volume_confirmation: true
+  min_volume_ratio: 1.2
+risk:
+  atr_period: 14
+  atr_multiplier: 4.0
+  max_correlation: 0.8
+  volatility_regime_multiplier: 1.5
+  max_drawdown_threshold: 0.25
+  max_exchange_exposure: 0.4
+costs:
+  maker_fee: 0.0002
+  taker_fee: 0.0004
+  base_spread: 0.0001
+  funding_lookback_days: 30
+data:
+  start_date: '2022-01-01'
+  end_date: '2023-12-31'
+  universe_size: 10
+portfolio:
+  max_weight: 0.1
+  rebalance_frequency: daily
+  optimization_method: equal_weight
