@@ -1,6 +1,6 @@
 data:
-  start_date: '2022-01-01'
-  end_date: '2023-12-31'
+  start_date: '2022-09-15'
+  end_date: '2025-05-31'
   universe_size: 10
   market_cap_threshold: 100000000
   exclude_stablecoins: true

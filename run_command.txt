@@ -1,0 +1,6 @@
+# Run backtest with correct date range:
+python run.py --start-date 2022-09-15 --end-date 2023-12-31 --no-validate
+
+# Or just use:
+python run.py --no-validate
+# (if config.yaml has been updated with correct dates)
