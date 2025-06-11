@@ -1,0 +1,23 @@
+# 4. Adaptive Strategy - Either Signal Can Trigger (config_adaptive.yaml)
+# Takes signals from either momentum OR mean return
+strategy:
+  universe_size: 10
+  rebalance_frequency: "weekly"
+  max_position_size: 0.10
+  long_short: true
+
+signals:
+  # Momentum parameters
+  adx_period: 14
+  adx_threshold: 30
+  ewma_fast: 10
+  ewma_slow: 30
+  volume_filter_multiple: 2.0
+  
+  # Mean return parameters
+  use_mean_return_signal: true
+  mean_return_window: 30
+  mean_return_type: "ewm"
+  mean_return_threshold: 0.015  # 1.5% threshold
+  mean_return_ewm_span: 20
+  combine_signals: "or"  # Either can trigger

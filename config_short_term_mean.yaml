@@ -1,0 +1,20 @@
+# 5. Short-term Mean Return Strategy (config_short_term_mean.yaml)
+# Faster signals based on 7-day mean returns
+strategy:
+  universe_size: 10
+  rebalance_frequency: "daily"  # More frequent for short-term
+  max_position_size: 0.08  # Smaller positions for short-term
+  long_short: true
+
+signals:
+  use_mean_return_signal: true
+  mean_return_window: 7  # 7-day window
+  mean_return_type: "ewm"
+  mean_return_threshold: 0.01  # 1% threshold
+  mean_return_ewm_span: 5  # Very recent emphasis
+  combine_signals: "override"
+
+risk:
+  atr_period: 10  # Shorter ATR for faster adaptation
+  atr_multiplier: 3.0  # Tighter risk control
+  max_drawdown_threshold: 0.15  # Tighter drawdown control

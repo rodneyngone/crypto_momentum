@@ -1,0 +1,21 @@
+# 1. Pure Mean Reversion Strategy (config_mean_reversion.yaml)
+# Goes long when recent returns are negative (buy the dip)
+# Goes short when recent returns are positive (fade the rally)
+strategy:
+  universe_size: 10
+  rebalance_frequency: "weekly"
+  max_position_size: 0.10
+  long_short: true
+
+signals:
+  # Disable momentum signals
+  use_mean_return_signal: true
+  mean_return_window: 30
+  mean_return_type: "simple"
+  mean_return_threshold: -0.02  # Negative threshold for mean reversion
+  combine_signals: "override"
+  
+  # These are ignored when combine_signals is "override"
+  adx_threshold: 100  # Set high to effectively disable
+  ewma_fast: 10
+  ewma_slow: 30

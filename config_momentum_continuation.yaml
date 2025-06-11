@@ -1,0 +1,16 @@
+# 2. Momentum Continuation Strategy (config_momentum_continuation.yaml)
+# Goes long when recent returns are strongly positive
+# Goes short when recent returns are strongly negative
+strategy:
+  universe_size: 10
+  rebalance_frequency: "weekly"
+  max_position_size: 0.10
+  long_short: true
+
+signals:
+  use_mean_return_signal: true
+  mean_return_window: 30
+  mean_return_type: "ewm"
+  mean_return_threshold: 0.02  # 2% positive threshold for momentum
+  mean_return_ewm_span: 15  # Recent emphasis
+  combine_signals: "override"

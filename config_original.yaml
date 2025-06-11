@@ -1,0 +1,19 @@
+strategy:
+  universe_size: 10  # Reduce from 20
+  rebalance_frequency: "weekly"
+  max_position_size: 0.10  # Reduce from 0.20
+
+signals:
+  adx_threshold: 30  # Increase from 20
+  ewma_fast: 10  # Reduce from 20
+  ewma_slow: 30  # Reduce from 50
+
+risk:
+  atr_multiplier: 4.0  # Increase from 2.0
+  max_drawdown_threshold: 0.25  # Increase from 0.15
+
+costs:
+  maker_fee: 0.0002
+  taker_fee: 0.0004
+  base_spread: 0.0001
+  funding_lookback_days: 30

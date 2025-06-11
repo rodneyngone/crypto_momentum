@@ -1,0 +1,37 @@
+# config_mean_return.yaml - Configuration with mean return signals
+
+strategy:
+  universe_size: 10
+  rebalance_frequency: "weekly"
+  max_position_size: 0.10
+  long_short: true
+
+signals:
+  # Original momentum parameters
+  adx_period: 14
+  adx_threshold: 30
+  ewma_fast: 10
+  ewma_slow: 30
+  volume_filter_multiple: 2.0
+  
+  # New mean return parameters
+  use_mean_return_signal: true
+  mean_return_window: 30
+  mean_return_type: "ewm"  # Options: "simple" or "ewm"
+  mean_return_threshold: 0.01  # 1% threshold
+  mean_return_ewm_span: 20  # For exponentially weighted (shorter than window for more recent weight)
+  combine_signals: "override"  # Options: "override", "and", "or"
+
+risk:
+  atr_period: 14
+  atr_multiplier: 4.0
+  max_correlation: 0.8
+  volatility_regime_multiplier: 1.5
+  max_drawdown_threshold: 0.25
+  max_exchange_exposure: 0.40
+
+costs:
+  maker_fee: 0.0002
+  taker_fee: 0.0004
+  base_spread: 0.0001
+  funding_lookback_days: 30
