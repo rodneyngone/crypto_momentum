@@ -1,0 +1,120 @@
+# config_crypto_optimized.yaml
+# Configuration with empirically validated thresholds for cryptocurrency markets
+
+data:
+  start_date: '2022-01-01'
+  end_date: '2023-12-31'
+  universe_size: 10  # Reduced from 20 for better signal quality
+  market_cap_threshold: 100000000
+  exclude_stablecoins: true
+  survivorship_bias: true
+  data_source: binance
+  cache_directory: data
+  cache_days: 30
+  update_frequency: daily
+  min_trading_days: 100
+  max_missing_data_pct: 0.05
+
+signals:
+  # Strategy selection
+  signal_strategy: momentum  # Options: momentum, mean_return_ewm, mean_return_simple, rsi, hybrid_and, hybrid_or
+  
+  # CRYPTO-OPTIMIZED MOMENTUM PARAMETERS
+  momentum_threshold: 0.01        # 1% deviation from EWMA
+  momentum_ewma_span: 20          # 20-day EWMA for trend
+  
+  # CRYPTO-OPTIMIZED MEAN RETURN PARAMETERS (FIXED)
+  # Based on empirical analysis: crypto daily returns typically 0.001-0.015
+  mean_return_ewm_threshold: 0.003      # 0.3% daily - generates ~40 signals/year
+  mean_return_ewm_span: 5               # 5-day EWM for responsiveness
+  
+  mean_return_simple_threshold: 0.005   # 0.5% daily - generates ~30 signals/year
+  mean_return_simple_window: 3          # 3-day window for noise reduction
+  
+  # Technical indicators
+  adx_period: 14
+  adx_threshold: 25.0      # Slightly higher for crypto volatility
+  
+  rsi_period: 14
+  rsi_oversold: 25.0       # Lower for crypto (vs 30 for stocks)
+  rsi_overbought: 75.0     # Higher for crypto (vs 70 for stocks)
+  
+  # Volume confirmation
+  use_volume_confirmation: true
+  volume_threshold: 1.5     # 50% above average volume
+  volume_lookback: 20
+  
+  # Signal filtering
+  min_signal_gap: 2        # Minimum 2 days between signals
+  max_signals_per_period: 50
+  signal_decay_periods: 5
+  
+  # Advanced features
+  use_regime_detection: false
+  volatility_adjustment: true
+  correlation_filter: true
+  correlation_threshold: 0.8
+
+portfolio:
+  initial_capital: 1000000.0
+  max_position_size: 0.10      # 10% max per position (reduced from 20%)
+  min_position_size: 0.02      # 2% minimum
+  rebalance_frequency: weekly   # More frequent for crypto
+  rebalance_threshold: 0.10    # 10% drift triggers rebalance
+  optimization_method: risk_parity
+  target_volatility: 0.20      # 20% target vol (higher for crypto)
+  max_concentration: 0.15      # 15% max in single asset
+  sector_max_weight: 0.40      # If sector data available
+  consider_transaction_costs: true
+  min_trade_size: 500.0        # $500 minimum trade
+
+risk:
+  max_drawdown: 0.25           # 25% max drawdown (realistic for crypto)
+  daily_var_limit: 0.05        # 5% daily VaR
+  position_var_limit: 0.10
+  correlation_threshold: 0.80
+  volatility_lookback: 20      # Shorter for crypto responsiveness
+  volatility_multiple: 2.5     # Higher multiplier for crypto
+  use_stop_losses: true
+  stop_loss_pct: 0.08          # 8% stop loss (wider for crypto)
+  use_take_profits: false
+  take_profit_pct: 0.15
+  leverage_limit: 1.0          # No leverage
+  risk_monitoring_frequency: daily
+  alert_thresholds:
+    drawdown_warning: 0.15     # 15% drawdown warning
+    volatility_warning: 0.40   # 40% annualized vol warning
+    correlation_warning: 0.70
+
+costs:
+  # Binance-like fee structure
+  maker_fee: 0.001             # 0.1% maker fee
+  taker_fee: 0.001             # 0.1% taker fee
+  base_spread: 0.0005          # 0.05% base spread
+  impact_coefficient: 0.0002   # Market impact
+  use_slippage: true
+  slippage_coefficient: 0.0003 # 0.03% slippage
+  max_slippage: 0.01           # 1% max slippage
+  funding_rate: 0.0001         # 0.01% daily funding
+  borrow_rate: 0.0002          # For short positions
+
+backtest:
+  execution_delay: 0
+  market_hours_only: false     # Crypto trades 24/7
+  benchmark_symbol: BTCUSDT
+  risk_free_rate: 0.02
+  walk_forward_analysis: false
+  out_of_sample_periods: 252
+  monte_carlo_runs: 1000
+  save_trades: true
+  save_positions: true
+  save_metrics: true
+  output_directory: output
+  calculate_attribution: true
+  attribution_frequency: monthly
+
+# Global settings
+random_seed: 42
+log_level: INFO
+parallel_processing: true
+max_workers: 4

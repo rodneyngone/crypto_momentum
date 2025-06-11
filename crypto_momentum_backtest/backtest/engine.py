@@ -67,7 +67,7 @@ class BacktestEngine:
         )
         
         self.position_sizer = PositionSizer(
-            atr_period=config.risk.atr_period,
+            atr_period=config.signals.adx_period,
             atr_multiplier=config.risk.atr_multiplier,
             max_position_size=config.strategy.max_position_size,
             logger=self.logger
