@@ -102,12 +102,20 @@ class BacktestEngine:
             logger=self.logger
         )
         
+        # Get signal configuration with defaults
+        momentum_threshold = getattr(config.signals, 'momentum_threshold', 0.01) if hasattr(config, 'signals') else 0.01
+        mean_ewm_threshold = getattr(config.signals, 'mean_return_ewm_threshold', 0.015) if hasattr(config, 'signals') else 0.015
+        mean_simple_threshold = getattr(config.signals, 'mean_return_simple_threshold', 0.015) if hasattr(config, 'signals') else 0.015
+        
         self.signal_generator = SignalGenerator(
+            momentum_threshold=momentum_threshold,
+            momentum_ewma_span=ewma_fast,  # Use ewma_fast as momentum span
+            mean_return_ewm_threshold=mean_ewm_threshold,
+            mean_return_simple_threshold=mean_simple_threshold,
             adx_period=adx_period,
             adx_threshold=adx_threshold,
-            ewma_fast=ewma_fast,
-            ewma_slow=ewma_slow,
-            volume_filter_multiple=volume_filter,
+            use_volume_confirmation=True,
+            volume_threshold=volume_filter,  # Use volume_filter as threshold
             logger=self.logger
         )
         
@@ -205,9 +213,14 @@ class BacktestEngine:
             self.logger.info(f"Generating signals for {symbol}")
             
             # Generate signals using the configured strategy
+            # Get signal strategy as string (handle both enum and string)
+            signal_strategy = self.config.signals.signal_strategy
+            if hasattr(signal_strategy, 'value'):
+                signal_strategy = signal_strategy.value
+            
             signal_series = self.signal_generator.generate_signals(
                 df,
-                signal_type=self.config.signals.signal_strategy,
+                signal_type=signal_strategy,
                 symbol=symbol
             )
             
@@ -323,8 +336,11 @@ class BacktestEngine:
                 target_weights *= self.risk_manager.risk_state['exposure_level']
                 
                 # Calculate position sizes
+                # Import TechnicalIndicators for ATR calculation
+                from ..signals.technical_indicators import TechnicalIndicators
+                
                 atr_data = pd.DataFrame({
-                    symbol: self.signal_generator.indicators.atr(market_data[symbol])
+                    symbol: TechnicalIndicators.atr(market_data[symbol])
                     for symbol in market_data.keys()
                 })
                 
