@@ -1,8 +1,0 @@
-"""Enhanced signals module."""
-from .signal_generator_enhanced import EnhancedSignalGenerator
-from .signal_generator_enhanced import SignalType, SignalMetrics
-
-# Make enhanced version the default
-SignalGenerator = EnhancedSignalGenerator
-
-__all__ = ['SignalGenerator', 'EnhancedSignalGenerator', 'SignalType', 'SignalMetrics']

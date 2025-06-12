@@ -1,9 +1,0 @@
-"""Enhanced portfolio module."""
-from .erc_optimizer_enhanced import EnhancedERCOptimizer
-from .rebalancer_enhanced import EnhancedRebalancer
-
-# Make enhanced versions the default
-ERCOptimizer = EnhancedERCOptimizer
-Rebalancer = EnhancedRebalancer
-
-__all__ = ['ERCOptimizer', 'EnhancedERCOptimizer', 'Rebalancer', 'EnhancedRebalancer']
