@@ -1,0 +1,17 @@
+data:
+  end_date: '2023-12-31'
+  start_date: '2022-01-01'
+  universe_size: 10
+portfolio:
+  arp_shrinkage_factor: null
+  base_rebalance_frequency: weekly
+  optimization_method: agnostic_risk_parity
+  target_volatility: 0.2
+  use_dynamic_rebalancing: true
+risk:
+  max_drawdown: 0.25
+  use_trailing_stops: true
+signals:
+  min_score_threshold: 0.2
+  signal_strategy: momentum_score
+  use_volume_confirmation: true

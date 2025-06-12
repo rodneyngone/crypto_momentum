@@ -11,7 +11,7 @@ from pathlib import Path
 from ..data.json_storage import JsonStorage
 from ..data import UniverseManager
 from ..signals import SignalGenerator
-from ..portfolio import ERCOptimizer
+from ..portfolio import ERCOptimizer, ARPOptimizer
 from ..portfolio.position_sizer import PositionSizer
 from ..portfolio import Rebalancer
 from ..risk import RiskManager
@@ -119,11 +119,31 @@ class BacktestEngine:
             logger=self.logger
         )
         
-        self.optimizer = ERCOptimizer(
-            max_position_size=max_position_size,
-            allow_short=long_short,
-            logger=self.logger
-        )
+        # Check if using ARP optimizer
+        optimization_method = getattr(config.portfolio, 'optimization_method', 'enhanced_risk_parity') if hasattr(config, 'portfolio') else 'enhanced_risk_parity'
+        
+        if optimization_method == 'agnostic_risk_parity':
+            # Get ARP-specific parameters
+            target_volatility = getattr(config.portfolio, 'target_volatility', None) if hasattr(config, 'portfolio') else None
+            arp_shrinkage_factor = getattr(config.portfolio, 'arp_shrinkage_factor', None) if hasattr(config, 'portfolio') else None
+            
+            self.optimizer = ARPOptimizer(
+                target_volatility=target_volatility,
+                budget_constraint='full_investment' if long_short else 'long_only',
+                logger=self.logger
+            )
+            self.logger.info("Using Agnostic Risk Parity (ARP) optimizer")
+            
+            # Store ARP-specific config
+            self.arp_shrinkage_factor = arp_shrinkage_factor
+        else:
+            # Existing ERC optimizer
+            self.optimizer = ERCOptimizer(
+                max_position_size=max_position_size,
+                allow_short=long_short,
+                logger=self.logger
+            )
+            self.logger.info("Using Enhanced Risk Contribution (ERC) optimizer")
         
         self.position_sizer = PositionSizer(
             atr_period=adx_period,  # Use ADX period as ATR period
@@ -316,11 +336,31 @@ class BacktestEngine:
                 current_signals = signal_matrix.iloc[i]
                 
                 if len(lookback_returns) > 20:
-                    target_weights = self.optimizer.optimize(
-                        lookback_returns,
-                        pd.DataFrame(current_signals).T,
-                        constraints=None
-                    )
+                    # Check if using ARP optimizer
+                    if isinstance(self.optimizer, ARPOptimizer):
+                        # ARP needs covariance matrix and signals
+                        cov_matrix = lookback_returns.cov()
+                        
+                        # Get shrinkage factor if configured
+                        shrinkage = getattr(self, 'arp_shrinkage_factor', None)
+                        
+                        # Optimize with ARP
+                        target_weights = self.optimizer.optimize(
+                            covariance_matrix=cov_matrix,
+                            signals=current_signals,
+                            shrinkage_factor=shrinkage
+                        )
+                        
+                        # Ensure target_weights is a Series with correct index
+                        if isinstance(target_weights, np.ndarray):
+                            target_weights = pd.Series(target_weights, index=current_signals.index)
+                    else:
+                        # Existing ERC optimization
+                        target_weights = self.optimizer.optimize(
+                            lookback_returns,
+                            pd.DataFrame(current_signals).T,
+                            constraints=None
+                        )
                 else:
                     # Equal weight for initial period
                     active_signals = current_signals[current_signals != 0]
@@ -441,7 +481,7 @@ class BacktestEngine:
             # Simple cost calculation
             costs = self.cost_model.calculate_trading_costs(
                 trade_value=trade_value,
-                trade_type='taker',
+                trade_type='taker',  # Assume taker for conservative estimate
                 volatility=0.15,  # Default volatility
                 volume=1e8  # Default volume
             )

@@ -3,6 +3,7 @@
 
 from .erc_optimizer_enhanced import EnhancedERCOptimizer
 from .rebalancer_enhanced import EnhancedRebalancer as _EnhancedRebalancer
+from .agnostic_optimizer import AgnosticRiskParityOptimizer
 import logging
 from typing import Optional
 
@@ -24,5 +25,13 @@ class Rebalancer(_EnhancedRebalancer):
 # Make enhanced versions available with compatibility
 ERCOptimizer = EnhancedERCOptimizer
 EnhancedRebalancer = _EnhancedRebalancer
+ARPOptimizer = AgnosticRiskParityOptimizer
 
-__all__ = ['ERCOptimizer', 'EnhancedERCOptimizer', 'Rebalancer', 'EnhancedRebalancer']
+__all__ = [
+    'ERCOptimizer', 
+    'EnhancedERCOptimizer', 
+    'Rebalancer', 
+    'EnhancedRebalancer',
+    'ARPOptimizer',
+    'AgnosticRiskParityOptimizer'
+]

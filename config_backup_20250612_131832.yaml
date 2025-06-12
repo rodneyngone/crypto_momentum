@@ -51,13 +51,13 @@ portfolio:
   min_position_size: 0.02
   base_rebalance_frequency: weekly
   use_dynamic_rebalancing: true
-  optimization_method: agnostic_risk_parity
-  concentration_mode: false
+  optimization_method: enhanced_risk_parity
+  concentration_mode: true
   top_n_assets: 5
   concentration_weight: 0.6
   momentum_tilt_strength: 0.5
-  use_momentum_weighting: false
-  target_volatility: 0.15
+  use_momentum_weighting: true
+  target_volatility: 0.25
   max_concentration: 0.3
   category_max_weights:
     defi: 0.4
@@ -69,7 +69,21 @@ portfolio:
   min_trade_size: 500.0
   target_cash_allocation: 0.0
   max_cash_allocation: 0.05
-  arp_shrinkage_factor: null
+    # Optimization method - now supports 'agnostic_risk_parity'
+  optimization_method: agnostic_risk_parity  # Options: enhanced_risk_parity, agnostic_risk_parity, equal_weight
+  
+  # ARP-specific parameters
+  arp_shrinkage_factor: null    # null for pure ARP, 0.0-1.0 for shrinkage toward Markowitz
+                                 # 0.0 = pure ARP (Q=I), 1.0 = pure Markowitz (Q=C)
+                                 # Recommended: null or 0.0 for maximum robustness
+  
+  # Target volatility (optional - if not set, uses budget constraint)
+  target_volatility: 0.15        # 15% annual volatility target
+  
+  # Note: When using ARP, these parameters are less relevant:
+  # - concentration_mode (ARP naturally diversifies across PCs)
+  # - momentum_tilt_strength (signals are incorporated directly)
+  # - use_momentum_weighting (momentum is in the signals)
 risk:
   max_drawdown: 0.2
   daily_var_limit: 0.05
