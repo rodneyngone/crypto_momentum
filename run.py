@@ -15,23 +15,23 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Use absolute imports when running as a script
-try:
-    from crypto_momentum_backtest.utils.config import Config
-    from crypto_momentum_backtest.utils.logger import setup_logger
-    from crypto_momentum_backtest.data.binance_fetcher import BinanceFetcher
-    from crypto_momentum_backtest.data.universe_manager import UniverseManager
-    from crypto_momentum_backtest.backtest.engine import BacktestEngine
-    from crypto_momentum_backtest.backtest.validator import BacktestValidator
-    from crypto_momentum_backtest.backtest.metrics import MetricsCalculator
-except ImportError:
-    # Fallback to relative imports if running as module
-    from utils.config import Config
-    from utils.logger import setup_logger
-    from data.binance_fetcher import BinanceFetcher
-    from data.universe_manager import UniverseManager
-    from backtest.engine import BacktestEngine
-    from backtest.validator import BacktestValidator
-    from backtest.metrics import MetricsCalculator
+# try:
+from crypto_momentum_backtest.utils.config import Config
+from crypto_momentum_backtest.utils.logger import setup_logger
+from crypto_momentum_backtest.data.binance_fetcher import BinanceFetcher
+from crypto_momentum_backtest.data.universe_manager_enhanced import EnhancedUniverseManager
+from crypto_momentum_backtest.backtest.engine import BacktestEngine
+from crypto_momentum_backtest.backtest.validator import BacktestValidator
+from crypto_momentum_backtest.backtest.metrics import MetricsCalculator
+# except ImportError:
+#     # Fallback to relative imports if running as module
+#     from utils.config import Config
+#     from utils.logger import setup_logger
+#     from data.binance_fetcher import BinanceFetcher
+#     from data.universe_manager import UniverseManager
+#     from backtest.engine import BacktestEngine
+#     from backtest.validator import BacktestValidator
+#     from backtest.metrics import MetricsCalculator
 
 
 def setup_environment(args):

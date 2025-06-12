@@ -9,12 +9,12 @@ from datetime import datetime
 from pathlib import Path
 
 from ..data.json_storage import JsonStorage
-from ..data.universe_manager import UniverseManager
-from ..signals.signal_generator import SignalGenerator
-from ..portfolio.erc_optimizer import ERCOptimizer
+from ..data import UniverseManager
+from ..signals import SignalGenerator
+from ..portfolio import ERCOptimizer
 from ..portfolio.position_sizer import PositionSizer
-from ..portfolio.rebalancer import Rebalancer
-from ..risk.risk_manager import RiskManager
+from ..portfolio import Rebalancer
+from ..risk import RiskManager
 from ..costs.cost_model import CostModel
 from ..costs.funding_rates import FundingRates
 from ..utils.config import Config

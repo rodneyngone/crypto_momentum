@@ -1,0 +1,35 @@
+
+# Configuration Enhancement Summary
+
+## 🔑 Critical Fixes
+- mean_return_ewm_threshold: 0.02 → 0.003 (Fixed 10x bug!)
+- mean_return_simple_threshold: 0.02 → 0.005
+
+## 📊 Signal Improvements
+- signal_strategy: 'momentum' → 'momentum_score'
+- adx_threshold: 25 → 15 (better trend detection)
+- Added multi-timeframe ADX: [7, 14, 21]
+- Added momentum scoring weights
+
+## 💼 Portfolio Enhancements
+- max_position_size: 0.10 → 0.25
+- Added concentration mode (60% in top 5)
+- Added momentum tilting (0.5 strength)
+- Universe: 10 → 30 (filtered to 15)
+
+## 🛡️ Risk Improvements
+- max_drawdown: 0.25 → 0.20
+- Added trailing stops (2.5x ATR)
+- Added regime detection
+- correlation_threshold: 0.80 → 0.70
+
+## 💰 Cost Optimizations
+- maker_fee: 0.001 → 0.0008 (VIP tier)
+- base_spread: 0.0005 → 0.0003
+- Added dynamic rebalancing
+
+## 🎯 Expected Impact
+- Higher Sharpe ratio (targeting > 1.2)
+- Lower drawdowns (< 20%)
+- Better trend capture
+- Reduced trading costs
