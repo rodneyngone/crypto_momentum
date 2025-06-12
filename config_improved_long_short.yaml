@@ -1,0 +1,110 @@
+# config_improved_long_short.yaml
+# Improved configuration for better long/short performance
+
+data:
+  start_date: '2022-01-01'
+  end_date: '2025-05-31'
+  universe_size: 25          # More assets for better opportunities
+  selection_size: 40         # Larger pool for selection
+  market_cap_threshold: 50000000  # Lower threshold for more shorts
+  exclude_stablecoins: true
+  exclude_wrapped: true
+
+signals:
+  signal_strategy: momentum_score
+  
+  # More aggressive signal generation
+  min_score_threshold: 0.15    # Lower threshold for more signals
+  
+  # Shorter lookback for faster adaptation
+  momentum_lookback: 20       # Reduced from 30
+  momentum_weights:
+    price: 0.35
+    volume: 0.15
+    rsi: 0.25              # Higher RSI weight for mean reversion
+    macd: 0.25             # Higher MACD weight for trend changes
+  
+  # Adjusted RSI for bear market
+  rsi_period: 14
+  rsi_oversold: 20.0         # More extreme oversold
+  rsi_overbought: 80.0       # More extreme overbought
+  
+  # Faster MACD
+  macd_fast: 9
+  macd_slow: 21
+  macd_signal: 7
+  
+  # Volume confirmation
+  use_volume_confirmation: true
+  volume_threshold: 1.1      # Lower threshold
+
+portfolio:
+  initial_capital: 1000000.0
+  
+  # More balanced position sizing
+  max_position_size: 0.10      # Smaller positions for risk control
+  min_position_size: 0.02
+  
+  # Use ARP for better diversification in bear market
+  optimization_method: agnostic_risk_parity
+  arp_shrinkage_factor: 0.3    # Some shrinkage toward Markowitz
+  
+  # ARP parameters
+  target_volatility: 0.25       # Higher target for more exposure
+  
+  # More frequent rebalancing
+  base_rebalance_frequency: daily  # Daily in volatile markets
+  use_dynamic_rebalancing: true
+
+risk:
+  max_drawdown: 0.30           # Allow more drawdown
+  
+  # Adjusted for bear market
+  max_correlation: 0.6         # Tighter correlation control
+  volatility_regime_multiplier: 1.2
+  
+  # Tighter stops in bear market
+  use_stop_losses: true
+  stop_loss_pct: 0.06          # 6% stop loss
+  use_trailing_stops: true
+  trailing_stop_atr_multiplier: 2.0  # Tighter trailing stops
+  
+  # Regime parameters
+  regime_lookback: 30          # Faster regime detection
+  crisis_vol_threshold: 0.8    # Lower threshold for crisis detection
+
+costs:
+  maker_fee: 0.001
+  taker_fee: 0.001
+  base_spread: 0.0005
+  
+  # Adjusted short costs
+  borrow_rate: 0.0002          # Lower assumption
+  funding_rate: 0.0001
+
+backtest:
+  benchmark_symbol: BTCUSDT
+  calculate_attribution: true
+  save_trades: true
+  save_positions: true
+  output_directory: output_improved_long_short
+
+strategy:
+  long_short: true
+  signal_type: momentum_score
+  universe_size: 25
+
+# Market regime overrides
+regime_parameters:
+  trending:
+    exposure_multiplier: 1.2    # More exposure in clear trends
+    rebalance_frequency: daily
+    max_position_size: 0.12
+  volatile:
+    exposure_multiplier: 0.6    # Reduce in high volatility
+    rebalance_frequency: daily
+    max_position_size: 0.08
+  crisis:
+    exposure_multiplier: 0.4    # Minimal in crisis
+    rebalance_frequency: daily
+    max_position_size: 0.05
