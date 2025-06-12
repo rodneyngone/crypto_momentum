@@ -234,21 +234,6 @@ class EnhancedSignalGenerator:
         signals[composite_score > self.min_score_threshold] = composite_score[composite_score > self.min_score_threshold]
         signals[composite_score < -self.min_score_threshold] = composite_score[composite_score < -self.min_score_threshold]
         
-        
-        # LONG_SHORT_PATCH: Ensure we have both long and short signals
-        # Center the scores around zero to get short signals
-        non_zero_scores = composite_score[composite_score != 0]
-        if len(non_zero_scores) > 0:
-            # If all scores are positive, adjust by subtracting median
-            if non_zero_scores.min() > 0:
-                score_median = non_zero_scores.median()
-                composite_score = composite_score - score_median * 0.5
-        
-        # Re-apply thresholds for balanced long/short
-        signals = pd.Series(0.0, index=data.index)
-        signals[composite_score > self.min_score_threshold] = composite_score[composite_score > self.min_score_threshold]
-        signals[composite_score < -self.min_score_threshold] = composite_score[composite_score < -self.min_score_threshold]
-        
         return signals
     
     def _generate_multi_timeframe_signals(self, data: pd.DataFrame) -> pd.Series:

@@ -30,7 +30,6 @@ class OptimizationMethod(Enum):
     EQUAL_WEIGHT = "equal_weight"
     RISK_PARITY = "risk_parity"
     ENHANCED_RISK_PARITY = "enhanced_risk_parity"
-    AGNOSTIC_RISK_PARITY = "agnostic_risk_parity"
     MEAN_VARIANCE = "mean_variance"
     MINIMUM_VARIANCE = "minimum_variance"
     MAXIMUM_SHARPE = "maximum_sharpe"
@@ -240,30 +239,27 @@ class PortfolioConfig:
     """Configuration for portfolio construction and optimization."""
     
     # Initial capital and position sizing
-    initial_capital: float = 1_000_000.0
-    max_position_size: float = 0.10
-    min_position_size: float = 0.01
+    initial_capital: float = 1_000_000.0  # $1M starting capital
+    max_position_size: float = 0.10       # 10% max per asset
+    min_position_size: float = 0.01       # 1% minimum position
     
     # Rebalancing
     rebalance_frequency: RebalanceFrequency = RebalanceFrequency.MONTHLY
-    base_rebalance_frequency: str = "weekly"
-    use_dynamic_rebalancing: bool = True
-    rebalance_threshold: float = 0.05
+    base_rebalance_frequency: str = "weekly"  # Base frequency for dynamic rebalancing
+    use_dynamic_rebalancing: bool = True   # Enable dynamic rebalancing
+    rebalance_threshold: float = 0.05      # 5% drift threshold for rebalancing
     
     # Optimization method
     optimization_method: OptimizationMethod = OptimizationMethod.ENHANCED_RISK_PARITY
-    concentration_mode: bool = True
-    top_n_assets: int = 5
-    concentration_weight: float = 0.6
-    momentum_tilt_strength: float = 0.5
-    use_momentum_weighting: bool = True
-    target_volatility: float = 0.15
-    
-    # ARP-specific parameters - ADD THESE TWO LINES
-    arp_shrinkage_factor: Optional[float] = None  # Shrinkage between ARP and Markowitz
+    concentration_mode: bool = True        # Enable concentration mode
+    top_n_assets: int = 5                  # Top N assets for concentration
+    concentration_weight: float = 0.6      # Weight for top assets
+    momentum_tilt_strength: float = 0.5    # Strength of momentum tilt
+    use_momentum_weighting: bool = True    # Enable momentum weighting
+    target_volatility: float = 0.15        # 15% annual volatility target
     
     # Risk constraints
-    max_concentration: float = 0.20
+    max_concentration: float = 0.20        # 20% max in any single asset
     sector_max_weight: float = 0.30        # 30% max per sector (if applicable)
     category_max_weights: Dict[str, float] = field(default_factory=lambda: {
         'defi': 0.4,

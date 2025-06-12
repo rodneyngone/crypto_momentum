@@ -1,0 +1,101 @@
+# config_long_short.yaml
+# Corrected configuration for long/short momentum strategy
+
+data:
+  start_date: '2022-01-01'
+  end_date: '2023-12-31'
+  universe_size: 20          # More assets for long/short opportunities
+  selection_size: 30         # Larger selection pool
+  market_cap_threshold: 100000000
+  exclude_stablecoins: true
+  exclude_wrapped: true
+
+signals:
+  # Use momentum_score for continuous signals that work well with long/short
+  signal_strategy: momentum_score
+  
+  # Lower thresholds to generate more signals (both long and short)
+  min_score_threshold: 0.2    # Signals above +0.2 or below -0.2
+  
+  # Momentum parameters optimized for long/short
+  momentum_lookback: 30       # Look for 30-day momentum
+  momentum_weights:
+    price: 0.4
+    volume: 0.2
+    rsi: 0.2
+    macd: 0.2
+  
+  # Technical indicators
+  rsi_period: 14
+  rsi_oversold: 25.0         # More extreme for shorts
+  rsi_overbought: 75.0       # More extreme for longs
+  
+  # MACD parameters
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  
+  # Volume confirmation
+  use_volume_confirmation: true
+  volume_threshold: 1.2
+  
+  # Allow negative scores for short signals
+  absolute_momentum_threshold: 0.05
+  relative_momentum_threshold: 0.0
+
+portfolio:
+  initial_capital: 1000000.0
+  
+  # Position sizing for long/short
+  max_position_size: 0.15      # 15% max per position (long or short)
+  min_position_size: 0.02      # 2% minimum
+  
+  # Optimization method - ERC works well for long/short
+  optimization_method: enhanced_risk_parity
+  
+  # Long/short specific parameters
+  concentration_mode: false     # Don't concentrate - we want diversification
+  use_momentum_weighting: true  # Weight by signal strength
+  momentum_tilt_strength: 0.6   # Strong tilt based on signals
+  
+  # Target volatility for long/short portfolio
+  target_volatility: 0.20       # 20% target vol
+  
+  # Rebalancing
+  base_rebalance_frequency: weekly
+  use_dynamic_rebalancing: true
+
+risk:
+  max_drawdown: 0.25           # 25% max drawdown
+  
+  # Correlation control (removed max_position_size from here)
+  max_correlation: 0.7         # Avoid too many correlated positions
+  
+  # Stop losses for both long and short
+  use_stop_losses: true
+  stop_loss_pct: 0.08          # 8% stop loss
+  use_trailing_stops: true
+  trailing_stop_atr_multiplier: 2.5
+
+costs:
+  # Costs are typically higher for shorts (borrowing costs)
+  maker_fee: 0.001
+  taker_fee: 0.001
+  base_spread: 0.0005
+  
+  # Short-specific costs
+  borrow_rate: 0.0003          # 0.03% daily borrow rate for shorts
+  funding_rate: 0.0001         # Funding rate for perpetuals
+
+backtest:
+  benchmark_symbol: BTCUSDT
+  calculate_attribution: true
+  save_trades: true
+  save_positions: true
+  output_directory: output_long_short
+
+# Strategy parameters (for backward compatibility)
+strategy:
+  long_short: true             # Enable long/short trading
+  signal_type: momentum_score
+  universe_size: 20

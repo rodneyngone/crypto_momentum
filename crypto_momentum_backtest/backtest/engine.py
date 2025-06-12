@@ -1,5 +1,5 @@
 # crypto_momentum_backtest/backtest/engine.py
-"""Main backtesting engine using VectorBT."""
+"""Main backtesting engine using VectorBT with full long/short support."""
 import pandas as pd
 import numpy as np
 import vectorbt as vbt
@@ -22,7 +22,7 @@ from ..utils.config import Config
 
 class BacktestEngine:
     """
-    Main backtesting engine orchestrating all components.
+    Main backtesting engine orchestrating all components with long/short support.
     """
     
     def __init__(
@@ -70,9 +70,17 @@ class BacktestEngine:
             taker_fee = getattr(config.costs, 'taker_fee', 0.001) if hasattr(config, 'costs') else 0.001
             base_spread = getattr(config.costs, 'base_spread', 0.0005) if hasattr(config, 'costs') else 0.0005
             funding_days = getattr(config.costs, 'funding_lookback_days', 30) if hasattr(config, 'costs') else 30
+            borrow_rate = getattr(config.costs, 'borrow_rate', 0.0002) if hasattr(config, 'costs') else 0.0002
             
-            # Strategy parameters (for backward compatibility)
+            # Strategy parameters - CRITICAL FOR LONG/SHORT
             long_short = getattr(config.strategy, 'long_short', True) if hasattr(config, 'strategy') else True
+            
+            # Override with explicit long/short if in config
+            if hasattr(config, 'portfolio') and hasattr(config.portfolio, 'allow_short'):
+                long_short = config.portfolio.allow_short
+            
+            self.long_short = long_short
+            self.logger.info(f"Long/Short trading: {'ENABLED' if long_short else 'DISABLED'}")
             
         except AttributeError as e:
             self.logger.warning(f"Config attribute error: {e}, using defaults")
@@ -92,7 +100,9 @@ class BacktestEngine:
             taker_fee = 0.001
             base_spread = 0.0005
             funding_days = 30
+            borrow_rate = 0.0002
             long_short = True
+            self.long_short = long_short
         
         # Initialize components
         self.storage = JsonStorage(data_dir)
@@ -106,16 +116,18 @@ class BacktestEngine:
         momentum_threshold = getattr(config.signals, 'momentum_threshold', 0.01) if hasattr(config, 'signals') else 0.01
         mean_ewm_threshold = getattr(config.signals, 'mean_return_ewm_threshold', 0.015) if hasattr(config, 'signals') else 0.015
         mean_simple_threshold = getattr(config.signals, 'mean_return_simple_threshold', 0.015) if hasattr(config, 'signals') else 0.015
+        min_score_threshold = getattr(config.signals, 'min_score_threshold', 0.2) if hasattr(config, 'signals') else 0.2
         
         self.signal_generator = SignalGenerator(
             momentum_threshold=momentum_threshold,
-            momentum_ewma_span=ewma_fast,  # Use ewma_fast as momentum span
+            momentum_ewma_span=ewma_fast,
             mean_return_ewm_threshold=mean_ewm_threshold,
             mean_return_simple_threshold=mean_simple_threshold,
             adx_period=adx_period,
             adx_threshold=adx_threshold,
             use_volume_confirmation=True,
-            volume_threshold=volume_filter,  # Use volume_filter as threshold
+            volume_threshold=volume_filter,
+            min_score_threshold=min_score_threshold,  # Important for long/short
             logger=self.logger
         )
         
@@ -137,17 +149,17 @@ class BacktestEngine:
             # Store ARP-specific config
             self.arp_shrinkage_factor = arp_shrinkage_factor
         else:
-            # Existing ERC optimizer
+            # Existing ERC optimizer with long/short support
             self.optimizer = ERCOptimizer(
                 max_position_size=max_position_size,
-                allow_short=long_short,
+                allow_short=long_short,  # Pass long/short setting
                 logger=self.logger
             )
-            self.logger.info("Using Enhanced Risk Contribution (ERC) optimizer")
+            self.logger.info(f"Using Enhanced Risk Contribution (ERC) optimizer (allow_short={long_short})")
         
         self.position_sizer = PositionSizer(
-            atr_period=adx_period,  # Use ADX period as ATR period
-            atr_multiplier=2.0,  # Default for crypto
+            atr_period=adx_period,
+            atr_multiplier=2.0,
             max_position_size=max_position_size,
             logger=self.logger
         )
@@ -161,7 +173,7 @@ class BacktestEngine:
             max_drawdown=max_drawdown,
             max_position_size=max_position_size,
             max_correlation=correlation_threshold,
-            max_exchange_exposure=0.40,  # Default
+            max_exchange_exposure=0.40,
             volatility_scale_threshold=volatility_multiple,
             logger=self.logger
         )
@@ -177,6 +189,9 @@ class BacktestEngine:
             lookback_days=funding_days,
             logger=self.logger
         )
+        
+        # Store borrow rate for short positions
+        self.borrow_rate = borrow_rate
 
     def load_data(
         self,
@@ -219,7 +234,7 @@ class BacktestEngine:
         data: Dict[str, pd.DataFrame]
     ) -> Dict[str, pd.DataFrame]:
         """
-        Generate trading signals for all symbols.
+        Generate trading signals for all symbols with long/short support.
         
         Args:
             data: Market data by symbol
@@ -228,15 +243,21 @@ class BacktestEngine:
             Signals by symbol
         """
         signals = {}
+        total_long_signals = 0
+        total_short_signals = 0
         
         for symbol, df in data.items():
             self.logger.info(f"Generating signals for {symbol}")
             
             # Generate signals using the configured strategy
-            # Get signal strategy as string (handle both enum and string)
             signal_strategy = self.config.signals.signal_strategy
             if hasattr(signal_strategy, 'value'):
                 signal_strategy = signal_strategy.value
+            
+            # Use momentum_score for long/short as it produces continuous scores
+            if self.long_short and signal_strategy != 'momentum_score':
+                self.logger.info(f"Switching to momentum_score for long/short trading")
+                signal_strategy = 'momentum_score'
             
             signal_series = self.signal_generator.generate_signals(
                 df,
@@ -244,13 +265,57 @@ class BacktestEngine:
                 symbol=symbol
             )
             
+            # For long/short, ensure we have both positive and negative signals
+            if self.long_short:
+                # Check signal distribution
+                positive_signals = (signal_series > 0).sum()
+                negative_signals = (signal_series < 0).sum()
+                
+                # If too imbalanced, adjust
+                if negative_signals == 0 or positive_signals / (negative_signals + 1) > 5:
+                    self.logger.warning(f"Signal imbalance for {symbol}: {positive_signals} long, {negative_signals} short")
+                    # Center the signals
+                    non_zero = signal_series[signal_series != 0]
+                    if len(non_zero) > 0:
+                        signal_series = signal_series - non_zero.mean() * 0.5
+            
             # Convert to DataFrame format expected by engine
             signal_df = pd.DataFrame(index=df.index)
-            signal_df['position'] = signal_series
-            signal_df['long_signal'] = signal_series == 1
-            signal_df['short_signal'] = signal_series == -1
+            signal_df['signal_strength'] = signal_series
+            
+            # For continuous signals (momentum_score), create discrete positions
+            if signal_strategy == 'momentum_score':
+                signal_df['position'] = 0
+                # Use configurable thresholds
+                long_threshold = getattr(self.signal_generator, 'min_score_threshold', 0.2)
+                short_threshold = -long_threshold
+                
+                signal_df.loc[signal_series > long_threshold, 'position'] = 1
+                signal_df.loc[signal_series < short_threshold, 'position'] = -1
+                
+                signal_df['long_signal'] = signal_df['position'] == 1
+                signal_df['short_signal'] = signal_df['position'] == -1
+            else:
+                # For discrete signals
+                signal_df['position'] = signal_series
+                signal_df['long_signal'] = signal_series == 1
+                signal_df['short_signal'] = signal_series == -1
+            
+            # Count signals
+            long_count = signal_df['long_signal'].sum()
+            short_count = signal_df['short_signal'].sum()
+            total_long_signals += long_count
+            total_short_signals += short_count
+            
+            self.logger.info(f"  {symbol}: {long_count} long, {short_count} short signals")
             
             signals[symbol] = signal_df
+        
+        self.logger.info(f"Total signals - Long: {total_long_signals}, Short: {total_short_signals}")
+        
+        # If no short signals generated and long/short is enabled, warn
+        if self.long_short and total_short_signals == 0:
+            self.logger.warning("No short signals generated! Check signal parameters.")
         
         return signals
     
@@ -261,7 +326,7 @@ class BacktestEngine:
         initial_capital: float = 1000000
     ) -> Dict:
         """
-        Run complete backtest.
+        Run complete backtest with long/short support.
         
         Args:
             start_date: Backtest start date
@@ -272,8 +337,8 @@ class BacktestEngine:
             Backtest results
         """
         self.logger.info(
-            f"Starting backtest from {start_date} to {end_date} "
-            f"with ${initial_capital:,.0f}"
+            f"Starting {'LONG/SHORT' if self.long_short else 'LONG-ONLY'} backtest "
+            f"from {start_date} to {end_date} with ${initial_capital:,.0f}"
         )
         
         # Get universe for the period
@@ -317,6 +382,10 @@ class BacktestEngine:
         positions = pd.DataFrame(0.0, index=common_index, columns=close_prices.columns)
         portfolio_values = []
         trades_log = []
+        daily_pnl = []
+        
+        # Track borrowing costs for shorts
+        cumulative_borrow_cost = 0
         
         # Simulate through time
         for i, date in enumerate(common_index):
@@ -365,10 +434,17 @@ class BacktestEngine:
                     # Equal weight for initial period
                     active_signals = current_signals[current_signals != 0]
                     if len(active_signals) > 0:
-                        target_weights = pd.Series(
-                            1.0 / len(active_signals),
-                            index=active_signals.index
-                        )
+                        # For long/short, allocate based on signal direction
+                        if self.long_short:
+                            target_weights = pd.Series(
+                                active_signals / len(active_signals),
+                                index=active_signals.index
+                            )
+                        else:
+                            target_weights = pd.Series(
+                                1.0 / len(active_signals),
+                                index=active_signals.index
+                            )
                     else:
                         target_weights = pd.Series(0.0, index=close_prices.columns)
                 
@@ -376,7 +452,6 @@ class BacktestEngine:
                 target_weights *= self.risk_manager.risk_state['exposure_level']
                 
                 # Calculate position sizes
-                # Import TechnicalIndicators for ATR calculation
                 from ..signals.technical_indicators import TechnicalIndicators
                 
                 atr_data = pd.DataFrame({
@@ -397,6 +472,13 @@ class BacktestEngine:
                     capital=portfolio_value
                 )
                 
+                # For long/short, respect signal direction
+                if self.long_short:
+                    # Ensure position signs match signal signs
+                    for symbol in position_sizes.index:
+                        if current_signals[symbol] < 0 and position_sizes[symbol] > 0:
+                            position_sizes[symbol] = -position_sizes[symbol]
+                
                 # Update positions
                 positions.iloc[i] = position_sizes
                 
@@ -410,27 +492,49 @@ class BacktestEngine:
                             'side': 'buy' if position_changes[symbol] > 0 else 'sell',
                             'units': abs(position_changes[symbol]),
                             'price': close_prices.loc[date, symbol],
-                            'value': abs(position_changes[symbol] * close_prices.loc[date, symbol])
+                            'value': abs(position_changes[symbol] * close_prices.loc[date, symbol]),
+                            'position_type': 'long' if positions.iloc[i][symbol] > 0 else 'short' if positions.iloc[i][symbol] < 0 else 'flat'
                         })
             else:
                 # Carry forward positions
                 positions.iloc[i] = positions.iloc[i-1]
             
-            # Calculate portfolio value
+            # Calculate portfolio value with long/short P&L
             position_values = positions.iloc[i] * close_prices.iloc[i]
-            cash = portfolio_value - position_values.sum()
+            
+            # Calculate P&L from price changes
+            if i > 0:
+                price_changes = close_prices.iloc[i] - close_prices.iloc[i-1]
+                position_pnl = (positions.iloc[i-1] * price_changes).sum()
+                daily_pnl.append(position_pnl)
+                
+                # Calculate borrowing costs for short positions
+                short_positions = positions.iloc[i-1][positions.iloc[i-1] < 0]
+                if len(short_positions) > 0:
+                    short_values = abs(short_positions * close_prices.iloc[i-1])
+                    daily_borrow_cost = short_values.sum() * self.borrow_rate
+                    cumulative_borrow_cost += daily_borrow_cost
+                    position_pnl -= daily_borrow_cost
+            else:
+                position_pnl = 0
             
             # Apply costs if there were trades
+            trade_costs = 0
             if i > 0 and not positions.iloc[i].equals(positions.iloc[i-1]):
-                trade_costs = self._calculate_trade_costs(
+                trade_costs_dict = self._calculate_trade_costs(
                     positions.iloc[i-1],
                     positions.iloc[i],
                     close_prices.iloc[i],
                     market_data
                 )
-                cash -= trade_costs['total']
+                trade_costs = trade_costs_dict['total']
             
-            portfolio_value = position_values.sum() + cash
+            # Update portfolio value
+            if i == 0:
+                portfolio_value = initial_capital
+            else:
+                portfolio_value = portfolio_values[-1] + position_pnl - trade_costs
+            
             portfolio_values.append(portfolio_value)
         
         # Create results
@@ -443,6 +547,14 @@ class BacktestEngine:
         # Calculate metrics
         returns_series = portfolio_series.pct_change().dropna()
         
+        # Log final statistics
+        total_trades = len(trades_log)
+        if total_trades > 0:
+            long_trades = sum(1 for t in trades_log if t.get('position_type') == 'long')
+            short_trades = sum(1 for t in trades_log if t.get('position_type') == 'short')
+            self.logger.info(f"Total trades: {total_trades} (Long: {long_trades}, Short: {short_trades})")
+            self.logger.info(f"Cumulative borrowing costs: ${cumulative_borrow_cost:,.2f}")
+        
         results = {
             'portfolio': portfolio_series,
             'returns': returns_series,
@@ -453,7 +565,8 @@ class BacktestEngine:
                 portfolio_value,
                 returns_series,
                 positions
-            )
+            ),
+            'cumulative_borrow_cost': cumulative_borrow_cost
         }
         
         return results
@@ -465,7 +578,7 @@ class BacktestEngine:
         prices: pd.Series,
         market_data: Dict[str, pd.DataFrame]
     ) -> Dict[str, float]:
-        """Calculate trading costs."""
+        """Calculate trading costs including considerations for shorts."""
         position_changes = curr_positions - prev_positions
         
         total_costs = {
@@ -478,12 +591,14 @@ class BacktestEngine:
         for symbol in position_changes[position_changes != 0].index:
             trade_value = abs(position_changes[symbol] * prices[symbol])
             
-            # Simple cost calculation
+            # Higher costs for short trades (typically)
+            is_short_trade = curr_positions[symbol] < 0 or prev_positions[symbol] < 0
+            
             costs = self.cost_model.calculate_trading_costs(
                 trade_value=trade_value,
-                trade_type='taker',  # Assume taker for conservative estimate
-                volatility=0.15,  # Default volatility
-                volume=1e8  # Default volume
+                trade_type='taker',
+                volatility=0.15 * (1.2 if is_short_trade else 1.0),  # Higher vol for shorts
+                volume=1e8
             )
             
             total_costs['exchange_fees'] += costs['exchange_fee']
@@ -503,7 +618,7 @@ class BacktestEngine:
         portfolio_values: pd.Series,
         returns: pd.Series
     ) -> Dict[str, float]:
-        """Calculate performance metrics."""
+        """Calculate performance metrics including long/short specific metrics."""
         # Basic metrics
         total_return = (portfolio_values.iloc[-1] - portfolio_values.iloc[0]) / portfolio_values.iloc[0]
         
@@ -516,6 +631,15 @@ class BacktestEngine:
         volatility = returns.std() * np.sqrt(252)
         win_rate = (returns > 0).sum() / len(returns)
         
+        # Long/short specific metrics
+        positive_returns = returns[returns > 0]
+        negative_returns = returns[returns < 0]
+        
+        avg_win = positive_returns.mean() if len(positive_returns) > 0 else 0
+        avg_loss = negative_returns.mean() if len(negative_returns) > 0 else 0
+        
+        profit_factor = abs(positive_returns.sum() / negative_returns.sum()) if len(negative_returns) > 0 and negative_returns.sum() != 0 else np.inf
+        
         return {
             'total_return': total_return,
             'annualized_return': (1 + total_return) ** (252 / len(returns)) - 1,
@@ -526,5 +650,9 @@ class BacktestEngine:
             'win_rate': win_rate,
             'best_day': returns.max(),
             'worst_day': returns.min(),
-            'calmar_ratio': (total_return / abs(max_drawdown)) if max_drawdown != 0 else 0
+            'calmar_ratio': (total_return / abs(max_drawdown)) if max_drawdown != 0 else 0,
+            'profit_factor': profit_factor,
+            'avg_win': avg_win,
+            'avg_loss': avg_loss,
+            'long_short_enabled': self.long_short
         }
