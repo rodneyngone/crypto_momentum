@@ -372,7 +372,7 @@ def main():
     
     try:
         # Get universe
-        universe_manager = UniverseManager(
+        universe_manager = EnhancedUniverseManager(
             data_dir,
             universe_size=config.strategy.universe_size,
             logger=logger

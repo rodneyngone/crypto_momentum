@@ -29,6 +29,7 @@ class OptimizationMethod(Enum):
     """Enumeration of portfolio optimization methods."""
     EQUAL_WEIGHT = "equal_weight"
     RISK_PARITY = "risk_parity"
+    ENHANCED_RISK_PARITY = "enhanced_risk_parity"
     MEAN_VARIANCE = "mean_variance"
     MINIMUM_VARIANCE = "minimum_variance"
     MAXIMUM_SHARPE = "maximum_sharpe"
@@ -37,8 +38,12 @@ class OptimizationMethod(Enum):
 class SignalStrategy(Enum):
     """Enumeration of signal generation strategies."""
     MOMENTUM = "momentum"
+    MOMENTUM_SCORE = "momentum_score"
+    DUAL_MOMENTUM = "dual_momentum"
+    MULTI_TIMEFRAME = "multi_timeframe"
     MEAN_RETURN_EWM = "mean_return_ewm"
     MEAN_RETURN_SIMPLE = "mean_return_simple"
+    ENSEMBLE = "ensemble"
     HYBRID_AND = "hybrid_and"
     HYBRID_OR = "hybrid_or"
 
@@ -53,8 +58,10 @@ class DataConfig:
     
     # Universe selection
     universe_size: int = 10
+    selection_size: int = 15  # Number to select from
     market_cap_threshold: float = 100_000_000  # $100M minimum market cap
     exclude_stablecoins: bool = True
+    exclude_wrapped: bool = True  # Exclude wrapped tokens
     survivorship_bias: bool = True  # Handle delisted assets
     
     # Data sources and caching
@@ -215,15 +222,29 @@ class PortfolioConfig:
     
     # Rebalancing
     rebalance_frequency: RebalanceFrequency = RebalanceFrequency.MONTHLY
+    base_rebalance_frequency: str = "weekly"  # Base frequency for dynamic rebalancing
+    use_dynamic_rebalancing: bool = True   # Enable dynamic rebalancing
     rebalance_threshold: float = 0.05      # 5% drift threshold for rebalancing
     
     # Optimization method
-    optimization_method: OptimizationMethod = OptimizationMethod.RISK_PARITY
+    optimization_method: OptimizationMethod = OptimizationMethod.ENHANCED_RISK_PARITY
+    concentration_mode: bool = True        # Enable concentration mode
+    top_n_assets: int = 5                  # Top N assets for concentration
+    concentration_weight: float = 0.6      # Weight for top assets
+    momentum_tilt_strength: float = 0.5    # Strength of momentum tilt
+    use_momentum_weighting: bool = True    # Enable momentum weighting
     target_volatility: float = 0.15        # 15% annual volatility target
     
     # Risk constraints
     max_concentration: float = 0.20        # 20% max in any single asset
     sector_max_weight: float = 0.30        # 30% max per sector (if applicable)
+    category_max_weights: Dict[str, float] = field(default_factory=lambda: {
+        'defi': 0.4,
+        'layer1': 0.5,
+        'layer2': 0.3,
+        'meme': 0.2,
+        'exchange': 0.3
+    })
     
     # Transaction costs consideration
     consider_transaction_costs: bool = True
@@ -264,17 +285,28 @@ class RiskConfig:
     
     # Position-level risk
     position_var_limit: float = 0.10       # 10% position VaR limit
-    correlation_threshold: float = 0.80     # 80% correlation warning threshold
+    correlation_threshold: float = 0.80    # 80% correlation warning threshold
+    max_correlation: float = 0.70          # 70% max correlation allowed
+    max_exchange_exposure: float = 0.4     # 40% max per exchange
     
     # Volatility management
     volatility_lookback: int = 30          # 30-day volatility calculation
     volatility_multiple: float = 2.0       # 2x volatility limit
+    volatility_regime_multiplier: float = 1.5  # Regime volatility multiplier
     
     # Stop-loss and take-profit
     use_stop_losses: bool = True
     stop_loss_pct: float = 0.05            # 5% stop loss
     use_take_profits: bool = False
     take_profit_pct: float = 0.10          # 10% take profit
+    use_trailing_stops: bool = True        # Enable trailing stops
+    trailing_stop_atr_multiplier: float = 2.5  # ATR multiplier for trailing stops
+    atr_period: int = 14                   # ATR calculation period
+    atr_multiplier: float = 2.0            # ATR multiplier
+    
+    # Regime detection
+    regime_lookback: int = 60              # Lookback for regime detection
+    crisis_vol_threshold: float = 1.0      # Crisis volatility threshold
     
     # Portfolio-level risk
     leverage_limit: float = 1.0            # No leverage by default
@@ -282,10 +314,11 @@ class RiskConfig:
     
     # Risk monitoring
     risk_monitoring_frequency: str = "daily"
+    max_drawdown_threshold: float = 0.2    # Max drawdown threshold
     alert_thresholds: Dict[str, float] = field(default_factory=lambda: {
         'drawdown_warning': 0.10,          # 10% drawdown warning
-        'volatility_warning': 0.25,       # 25% volatility warning
-        'correlation_warning': 0.70       # 70% correlation warning
+        'volatility_warning': 0.25,        # 25% volatility warning
+        'correlation_warning': 0.70        # 70% correlation warning
     })
     
     def __post_init__(self):
@@ -333,6 +366,7 @@ class CostConfig:
     # Funding and borrowing (for leverage/short positions)
     funding_rate: float = 0.0001           # 0.01% daily funding rate
     borrow_rate: float = 0.0002            # 0.02% daily borrowing rate
+    funding_lookback_days: int = 30        # Funding rate lookback period
     
     # Order execution
     fill_probability: float = 0.95         # 95% order fill probability
@@ -367,6 +401,7 @@ class BacktestConfig:
     
     # Validation and testing
     walk_forward_analysis: bool = False
+    walk_forward_splits: int = 5           # Number of walk-forward splits
     out_of_sample_periods: int = 252       # 1 year out-of-sample
     monte_carlo_runs: int = 1000           # Monte Carlo simulations
     
@@ -411,6 +446,9 @@ class Config:
     log_level: str = "INFO"
     parallel_processing: bool = True
     max_workers: int = 4
+    
+    # Regime parameters (optional)
+    regime_parameters: Optional[Dict[str, Dict[str, float]]] = None
     
     @classmethod
     def from_yaml(cls, file_path: Union[str, Path]) -> 'Config':
@@ -523,7 +561,8 @@ class Config:
                 random_seed=data.get('random_seed', 42),
                 log_level=data.get('log_level', 'INFO'),
                 parallel_processing=data.get('parallel_processing', True),
-                max_workers=data.get('max_workers', 4)
+                max_workers=data.get('max_workers', 4),
+                regime_parameters=data.get('regime_parameters', None)
             )
             
             # Validate cross-section dependencies
@@ -568,6 +607,10 @@ class Config:
             'use_volume_confirmation', 'volume_threshold', 'volume_lookback',
             'min_signal_gap', 'max_signals_per_period', 'signal_decay_periods',
             'use_regime_detection', 'volatility_adjustment', 'correlation_filter', 'correlation_threshold',
+            # Enhanced signal parameters
+            'adx_periods', 'base_ewma_span', 'adaptive_ewma', 'momentum_weights',
+            'absolute_momentum_threshold', 'relative_momentum_threshold', 'momentum_lookback',
+            'macd_fast', 'macd_slow', 'macd_signal', 'min_score_threshold', 'max_correlation',
             # Legacy compatibility parameters
             'ewma_fast', 'ewma_slow', 'threshold', 'lookback',
             'volume_filter_multiple', 'signal_type', 'combine_signals'
