@@ -1,6 +1,7 @@
-"""Enhanced signals module."""
-from .signal_generator_enhanced import EnhancedSignalGenerator
-from .signal_generator_enhanced import SignalType, SignalMetrics
+# crypto_momentum_backtest/signals/__init__.py
+"""Signals module with enhanced components."""
+
+from .signal_generator_enhanced import EnhancedSignalGenerator, SignalType, SignalMetrics
 
 # Make enhanced version the default
 SignalGenerator = EnhancedSignalGenerator
