@@ -19,7 +19,7 @@ if __name__ == "__main__":
 from crypto_momentum_backtest.utils.config import Config
 from crypto_momentum_backtest.utils.logger import setup_logger
 from crypto_momentum_backtest.data.binance_fetcher import BinanceFetcher
-from crypto_momentum_backtest.data.universe_manager_enhanced import EnhancedUniverseManager
+from crypto_momentum_backtest.data.universe_manager_enhanced import EnhancedUniverseManager as UniverseManager
 from crypto_momentum_backtest.backtest.engine import BacktestEngine
 from crypto_momentum_backtest.backtest.validator import BacktestValidator
 from crypto_momentum_backtest.backtest.metrics import MetricsCalculator
@@ -371,10 +371,10 @@ def main():
     end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
     
     try:
-        # Get universe
-        universe_manager = EnhancedUniverseManager(
+        # Get universe - FIXED: Use correct parameter name
+        universe_manager = UniverseManager(
             data_dir,
-            universe_size=config.strategy.universe_size,
+            base_universe_size=config.data.universe_size,  # Use config.data directly
             logger=logger
         )
         

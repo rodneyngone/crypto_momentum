@@ -126,6 +126,29 @@ class SignalConfig:
     rsi_oversold: float = 30.0
     rsi_overbought: float = 70.0
     
+    # Enhanced signal parameters
+    adx_periods: List[int] = field(default_factory=lambda: [7, 14, 21])
+    base_ewma_span: int = 20
+    adaptive_ewma: bool = True
+    momentum_weights: Dict[str, float] = field(default_factory=lambda: {
+        'price': 0.4,
+        'volume': 0.2,
+        'rsi': 0.2,
+        'macd': 0.2
+    })
+    absolute_momentum_threshold: float = 0.05
+    relative_momentum_threshold: float = 0.0
+    momentum_lookback: int = 30
+    
+    # MACD parameters
+    macd_fast: int = 12
+    macd_slow: int = 26
+    macd_signal: int = 9
+    
+    # Score thresholds
+    min_score_threshold: float = 0.3
+    max_correlation: float = 0.7
+    
     # Legacy compatibility parameters
     threshold: float = 0.01           # Legacy alias for momentum_threshold
     lookback: int = 20                # Legacy parameter
@@ -697,6 +720,11 @@ class Config:
         config_dict['signals']['signal_strategy'] = self.signals.signal_strategy.value
         config_dict['portfolio']['rebalance_frequency'] = self.portfolio.rebalance_frequency.value
         config_dict['portfolio']['optimization_method'] = self.portfolio.optimization_method.value
+        
+        # Handle base_rebalance_frequency which is already a string
+        if 'base_rebalance_frequency' in config_dict['portfolio']:
+            # It's already a string, no conversion needed
+            pass
         
         # Convert dates to strings
         config_dict['data']['start_date'] = self.data.start_date.strftime('%Y-%m-%d')
